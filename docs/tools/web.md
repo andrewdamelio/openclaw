@@ -25,6 +25,10 @@ These are **not** browser automation. For JS-heavy sites or logins, use the
 - Results are cached by query for 15 minutes (configurable).
 - `web_fetch` does a plain HTTP GET and extracts readable content
   (HTML → markdown/text). It does **not** execute JavaScript.
+- `web_fetch` requests [Cloudflare Markdown for Agents](https://blog.cloudflare.com/markdown-for-agents/)
+  via an `Accept` header preference for `text/markdown`. Sites behind Cloudflare
+  that support this return pre-rendered markdown, bypassing the need for HTML
+  extraction entirely.
 - `web_fetch` is enabled by default (unless explicitly disabled).
 
 ## Choosing a search provider
@@ -249,6 +253,13 @@ Fetch a URL and extract readable content.
 
 Notes:
 
+- `web_fetch` sends an `Accept: text/markdown, text/html;q=0.9, */*;q=0.1` header
+  to leverage [Cloudflare Markdown for Agents](https://blog.cloudflare.com/markdown-for-agents/).
+  Sites that support this return clean, server-rendered markdown instead of HTML,
+  which typically reduces token usage by ~80%. When the response `Content-Type` is
+  `text/markdown`, `web_fetch` uses the content directly (extractor: `cf-markdown`)
+  instead of running Readability or Firecrawl. Sites that don't support this header
+  return HTML as usual — no configuration needed.
 - `web_fetch` uses Readability (main-content extraction) first, then Firecrawl (if configured). If both fail, the tool returns an error.
 - Firecrawl requests use bot-circumvention mode and cache results by default.
 - `web_fetch` sends a Chrome-like User-Agent and `Accept-Language` by default; override `userAgent` if needed.
