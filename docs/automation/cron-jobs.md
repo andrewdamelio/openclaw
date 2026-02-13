@@ -11,10 +11,10 @@ title: "Cron Jobs"
 
 > **Cron vs Heartbeat?** See [Cron vs Heartbeat](/automation/cron-vs-heartbeat) for guidance on when to use each.
 
-Cron is the Gateway’s built-in scheduler. It persists jobs, wakes the agent at
+Cron is the Gateway's built-in scheduler. It persists jobs, wakes the agent at
 the right time, and can optionally deliver output back to a chat.
 
-If you want _“run this every morning”_ or _“poke the agent in 20 minutes”_,
+If you want _"run this every morning"_ or _"poke the agent in 20 minutes"_,
 cron is the mechanism.
 
 Troubleshooting: [/automation/troubleshooting](/automation/troubleshooting)
@@ -22,11 +22,11 @@ Troubleshooting: [/automation/troubleshooting](/automation/troubleshooting)
 ## TL;DR
 
 - Cron runs **inside the Gateway** (not inside the model).
-- Jobs persist under `~/.openclaw/cron/` so restarts don’t lose schedules.
+- Jobs persist under `~/.openclaw/cron/` so restarts don't lose schedules.
 - Two execution styles:
   - **Main session**: enqueue a system event, then run on the next heartbeat.
   - **Isolated**: run a dedicated agent turn in `cron:<jobId>`, with delivery (announce by default or none).
-- Wakeups are first-class: a job can request “wake now” vs “next heartbeat”.
+- Wakeups are first-class: a job can request "wake now" vs "next heartbeat".
 
 ## Quick start (actionable)
 
@@ -89,7 +89,8 @@ Think of a cron job as: **when** to run + **what** to do.
    - Isolated session → `payload.kind = "agentTurn"`
 
 Optional: one-shot jobs (`schedule.kind = "at"`) delete after success by default. Set
-`deleteAfterRun: false` to keep them (they will disable after success).
+`deleteAfterRun: false` to keep them (they will be set to `enabled: false` after
+firing but remain in the job store - see [One-shot job lifecycle](#one-shot-job-lifecycle)).
 
 ## Concepts
 
@@ -115,8 +116,28 @@ Cron supports three schedule kinds:
 - `every`: fixed interval (ms).
 - `cron`: 5-field cron expression with optional IANA timezone.
 
-Cron expressions use `croner`. If a timezone is omitted, the Gateway host’s
+Cron expressions use `croner`. If a timezone is omitted, the Gateway host's
 local timezone is used.
+
+### One-shot job lifecycle
+
+One-shot jobs (`schedule.kind = "at"`) have two possible outcomes after firing:
+
+| `deleteAfterRun` | After firing |
+|---|---|
+| `true` (default) | Job is **deleted** from the store. It disappears from `cron list`. |
+| `false` | Job is **kept** but set to `enabled: false`. It remains in `cron list` with its original schedule. |
+
+When building dashboards or reminder systems, the `deleteAfterRun: false` behavior
+is important: the job stays in the store so you can distinguish "fired but not
+acknowledged" (overdue) from "deleted." To detect this state, look for jobs where
+`schedule.kind === "at"` and `enabled === false`.
+
+To clean up a kept job after acknowledgement, delete it with `cron.remove` or the CLI.
+
+**Tip for agents:** If you use one-shot jobs as reminders that a user should
+acknowledge, set `deleteAfterRun: false` so the reminder persists until explicitly
+dismissed.
 
 ### Main vs isolated execution
 
@@ -219,8 +240,8 @@ Isolated jobs can deliver output to a channel via the top-level `delivery` confi
 
 Delivery config is only valid for isolated jobs (`sessionTarget: "isolated"`).
 
-If `delivery.channel` or `delivery.to` is omitted, cron can fall back to the main session’s
-“last route” (the last place the agent replied).
+If `delivery.channel` or `delivery.to` is omitted, cron can fall back to the main session's
+"last route" (the last place the agent replied).
 
 Target format reminders:
 
@@ -458,7 +479,7 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 
 ## Troubleshooting
 
-### “Nothing runs”
+### "Nothing runs"
 
 - Check cron is enabled: `cron.enabled` and `OPENCLAW_SKIP_CRON`.
 - Check the Gateway is running continuously (cron runs inside the Gateway process).
@@ -473,6 +494,6 @@ openclaw system event --mode now --text "Next heartbeat: check battery."
 
 ### Telegram delivers to the wrong place
 
-- For forum topics, use `-100…:topic:<id>` so it’s explicit and unambiguous.
-- If you see `telegram:...` prefixes in logs or stored “last route” targets, that’s normal;
+- For forum topics, use `-100…:topic:<id>` so it's explicit and unambiguous.
+- If you see `telegram:...` prefixes in logs or stored "last route" targets, that's normal;
   cron delivery accepts them and still parses topic IDs correctly.
