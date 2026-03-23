@@ -56,3 +56,24 @@ Ask your agent to "refresh skills" or restart the gateway. OpenClaw will discove
 ## Shared Skills
 
 You can also browse and contribute skills to [ClawHub](https://clawhub.com).
+
+## Skill Metadata Reference
+
+The YAML frontmatter supports these fields:
+
+| Field                                   | Required | Description                                                                                              |
+| --------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `name`                                  | Yes      | Unique identifier (snake_case)                                                                           |
+| `description`                           | Yes      | One-line description shown to the agent; drives automatic skill selection                                |
+| `read_when`                             | No       | List of conditions under which the agent should read this skill (shown in system prompt as a hint)       |
+| `user-invocable`                        | No       | Whether the skill can be triggered by the user via slash-command. Defaults to `true`                     |
+| `disable-model-invocation`              | No       | When `true`, the model cannot auto-invoke this skill; only explicit user commands can trigger it         |
+| `metadata.openclaw.os`                  | No       | OS filter (`["darwin"]`, `["linux"]`, etc.)                                                              |
+| `metadata.openclaw.always`              | No       | When `true`, the skill is always injected into the system prompt regardless of relevance scoring         |
+| `metadata.openclaw.emoji`               | No       | Emoji shown next to the skill name in listings (e.g. `🔍`)                                              |
+| `metadata.openclaw.skillKey`            | No       | Override the skill's lookup key (useful when skill `name` differs from the folder name)                  |
+| `metadata.openclaw.primaryEnv`          | No       | Primary environment variable this skill depends on (used for `apiKey` wiring in `skills.entries`)        |
+| `metadata.openclaw.requires.bins`       | No       | Required binaries on PATH — skill is hidden if any are missing                                           |
+| `metadata.openclaw.requires.anyBins`    | No       | At least one binary from this list must be on PATH                                                       |
+| `metadata.openclaw.requires.env`        | No       | Required environment variables — skill is hidden if any are unset                                        |
+| `metadata.openclaw.requires.config`     | No       | Required config keys — skill is hidden if any are absent                                                 |
